@@ -416,6 +416,14 @@ namespace XNodeEditor {
 
             BeginZoomed(position, zoom, topPadding);
 
+            // Compute the editor’s viewport in window coords
+            Rect viewRect = new Rect(
+              0,
+              topPadding,
+              position.width,
+              position.height - topPadding
+            );
+
             Vector2 mousePos = Event.current.mousePosition;
 
             if (e.type != EventType.Layout) {
@@ -443,6 +451,18 @@ namespace XNodeEditor {
                 if (graph.nodes[n] == null) continue;
                 if (n >= graph.nodes.Count) return;
                 XNode.Node node = graph.nodes[n];
+
+                // VIRTUALIZE: transform the node’s grid Rect into screen‐space
+                Vector2 size = nodeSizes.ContainsKey(node)
+                ? nodeSizes[node]
+                : new Vector2(NodeEditor.GetEditor(node, this).GetWidth(), defaultHeight);
+                Rect gridRect = new Rect(node.position, size);
+                Rect winRect  = NodeEditorWindow.current.GridToWindowRect(gridRect);
+                if (!viewRect.Overlaps(winRect, true)) {
+                // Skip *all* GUI work for this node
+                if (Event.current.type == EventType.Layout) culledNodes.Add(node);
+                continue;
+            }
 
                 // Culling
                 if (e.type == EventType.Layout) {
